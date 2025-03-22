@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "datasets>=3.4.1",
     "flax>=0.10.4",
     "grain>=0.2.3",
     "jax[cuda12]>=0.5.3",
