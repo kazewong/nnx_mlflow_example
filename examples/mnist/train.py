@@ -19,9 +19,9 @@ class GrainDataSource(grain.RandomAccessDataSource):
         return self.ds[idx]
 
 
-num_epochs = 10
+num_epochs = 2
 batch_size = 32
-eval_every = 100
+eval_every = 10
 
 index_sampler = grain.IndexSampler(
     len(ds["train"]),
@@ -101,29 +101,34 @@ metrics_history = {
     "test_accuracy": [],
 }
 
-for epoch in range(num_epochs):
-    print(f"Epoch {epoch + 1}/{num_epochs}")
-    for batch in tqdm(data_iter):
-    # for batch in tqdm(ds["train"].with_format("jax").iter(batch_size=batch_size)):
-        # Run the optimization for one step and make a stateful update to the following:
-        # - The train state's model parameters
-        # - The optimizer state
-        # - The training loss and accuracy batch metrics
-        train_step(model, optimizer, metrics, batch)
+mlflow.set_tracking_uri(uri="http://127.0.0.1:5000")
+mlflow.set_experiment("mnist")
 
-        # if step > 0 and (
-        #     step % eval_every == 0 or step == train_steps - 1
-        # ):  # One training epoch has passed.
-        #     # Log the training metrics.
-        #     for metric, value in metrics.compute().items():  # Compute the metrics.
-        #         metrics_history[f"train_{metric}"].append(value)  # Record the metrics.
-        #     metrics.reset()  # Reset the metrics for the test set.
+with mlflow.start_run():
 
-        #     # Compute the metrics on the test set after each training epoch.
-        #     for test_batch in test_ds.as_numpy_iterator():
-        #         eval_step(model, metrics, test_batch)
+    for epoch in range(num_epochs):
+        print(f"Epoch {epoch + 1}/{num_epochs}")
+        for step, batch in tqdm(enumerate(data_iter)):
+        # for batch in tqdm(ds["train"].with_format("jax").iter(batch_size=batch_size)):
+            # Run the optimization for one step and make a stateful update to the following:
+            # - The train state's model parameters
+            # - The optimizer state
+            # - The training loss and accuracy batch metrics
+            train_step(model, optimizer, metrics, batch)
 
-        #     # Log the test metrics.
-        #     for metric, value in metrics.compute().items():
-        #         metrics_history[f"test_{metric}"].append(value)
-        #     metrics.reset()  # Reset the metrics for the next training epoch.
+            if step > 0 and (
+                step % eval_every == 0
+            ):  # One training epoch has passed.
+                # Log the training metrics.
+                for metric, value in metrics.compute().items():  # Compute the metrics.
+                    mlflow.log_metric(f"train_{metric}", value)  # Record the metrics.
+                metrics.reset()  # Reset the metrics for the test set.
+
+                # # Compute the metrics on the test set after each training epoch.
+                # for test_batch in test_ds.as_numpy_iterator():
+                #     eval_step(model, metrics, test_batch)
+
+                # # Log the test metrics.
+                # for metric, value in metrics.compute().items():
+                #     metrics_history[f"test_{metric}"].append(value)
+                # metrics.reset()  # Reset the metrics for the next training epoch.
